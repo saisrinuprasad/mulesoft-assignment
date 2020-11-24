@@ -1,0 +1,13 @@
+#%RAML 1.0 DataType
+
+type: object
+properties:
+  companyCode: 
+   type: string
+   required: true
+  originLocation:
+    type: !include ../commonTypes/locationType.raml 
+    required: true 
+  destinationLocation:
+    type: !include ../commonTypes/locationType.raml  
+    required: true

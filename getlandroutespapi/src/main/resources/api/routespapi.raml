@@ -1,0 +1,10 @@
+#%RAML 1.0
+title: routesPAPI
+
+/booking/{transportType}/routes:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            type: !include exchange_modules/5cc567c8-a12a-4cfa-ab7d-d063b425bafa/bookingtypes/2.0.5/processAPITypes/routeTypes.raml

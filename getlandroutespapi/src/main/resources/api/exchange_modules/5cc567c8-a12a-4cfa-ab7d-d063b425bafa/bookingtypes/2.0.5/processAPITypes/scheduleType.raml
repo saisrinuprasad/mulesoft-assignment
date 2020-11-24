@@ -1,0 +1,23 @@
+#%RAML 1.0 DataType
+
+type: object
+properties:
+  departureSchedules:  
+    type: array
+    items:
+      properties:
+        availableSeats:
+         type: integer
+         required: true
+        departureDateTime:
+         type: datetime
+         required: true
+        travelRoute:
+         type: !include ../commonTypes/travelRouteType.raml
+         required: true
+        
+example:
+  !include ../examples/getSchedulesProcessAPIexample.raml
+     
+
+   

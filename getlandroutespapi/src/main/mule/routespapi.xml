@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:booking-system-api="http://www.mulesoft.org/schema/mule/booking-system-api" xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core 
+http://www.mulesoft.org/schema/mule/core/current/mule.xsd 
+http://www.mulesoft.org/schema/mule/http
+ http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+ http://www.mulesoft.org/schema/mule/mule-apikit 
+ http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+    <http:listener-config name="routespapi-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="routespapi-config" api="routespapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <http:request-config name="First_couch_HTTP_Request_configuration" doc:name="First_couch_HTTP_Request_configuration" doc:id="fa7d8f6b-16b1-49fa-b599-2a1b06dde91d">
+        <http:request-connection host="localhost" port="8085" />
+    </http:request-config>
+     <http:request-config name="Transnational_HTTP_Request_configuration" doc:name="Transnational_HTTP_Request_configuration" doc:id="9004911f-2601-4817-84c4-fc43645fbd4e">
+        <http:request-connection host="localhost" port="8083" />
+    </http:request-config>
+    <db:config name="Database_Config" doc:name="Database Config" doc:id="906a57fb-6671-4db2-b895-d7b69b66c3e6" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="Srisai" database="mule_support" />
+	</db:config>
+	
+	<flow name="routespapi-main">
+        <http:listener config-ref="routespapi-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="routespapi-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="routespapi-console">
+        <http:listener config-ref="routespapi-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="routespapi-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform xsi:schemaLocation=" http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="get:\booking\(transportType)\routes:application\json:routespapi-config">
+        <set-variable value="#[attributes.queryParams.destinationLocation]" doc:name="destinationLocation" doc:id="41f564a1-22dc-457a-85c4-c8221532b88d" variableName="destinationLocation"/>
+		<set-variable value="#[attributes.queryParams.companyCode]" doc:name="companyCode" doc:id="46b8ade6-e41c-42b6-965a-34f4379ad012" variableName="companyCode"/>
+		<scatter-gather doc:name="Scatter-Gather" doc:id="73fb239e-d415-452c-a018-e795ab77f735">
+            <route>
+                <flow-ref doc:name="firstCouchLandSubFlow" doc:id="d2451af4-b649-4555-8e81-3df09ab8d3ad" name="firstCoachLandSubFlow" />
+				<ee:transform doc:name="Transform Message" doc:id="c8dfff79-6995-40ff-a0f0-f44cc767a24d" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map {
+	CompanyCode: "FirstCouch",
+	originLocation: {
+		locationCode: $.departureLocationCode,
+		locationDesc: Mule::lookup("routespapiFlow", $.departureLocationCode )
+	},
+	destinationLocation:{
+		locationCode: $.arrivalLocationCode
+,		locationDesc: Mule::lookup("routespapiFlow", $.arrivalLocationCode )
+	}
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+            </route>
+            <route>
+                <flow-ref doc:name="transnationalLandSubFlow" doc:id="d444732e-87b9-4f91-a9c0-5255f31644cc" name="transnationalLandSubFlow" />
+				<ee:transform doc:name="Transform Message" doc:id="28939e2f-178c-4b6e-ad76-051e3fb1e33e" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map {
+	CompanyCode: "TransNational",
+	originLocation: {
+		locationCode: $.originLocation.locationCode,
+		locationDesc: Mule::lookup("routespapiFlow", $.originLocation.locationCode )
+	},
+	destinationLocation:{
+		locationCode: $.destinationLocation.locationCode,
+		locationDesc: Mule::lookup("routespapiFlow", $.destinationLocation.locationCode )
+	}
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+            </route>
+        </scatter-gather>
+        <ee:transform doc:name="Transform Message" doc:id="2dc5f62b-6d97-46ee-ad31-74c47d867053">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+[
+	payload."0".payload,
+	payload."1".payload
+]]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="516aaaf1-f531-4b8e-abfc-20568346626b">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var companyCode = attributes.queryParams.companyCode
+var destinationLocation = attributes.queryParams.destinationLocation
+---
+flatten(payload) ]]></ee:set-payload>
+					</ee:message>
+					<ee:variables>
+					</ee:variables>
+				</ee:transform>
+        <choice doc:name="Choice" doc:id="8fba57b7-34cb-4b18-bede-4ea163c332c1" >
+			<when expression="#[vars.companyCode != null and vars.destinationLocation != null]">
+				<logger level="INFO" doc:name="Logger" doc:id="e56f4635-6db1-4c2e-9eb9-b7b1be3a033b" message="#[vars.companyCode]"/>
+				<ee:transform doc:name="Transform Message" doc:id="ff96e2c0-58a1-4e2c-9e7b-a46730fabc8a" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload filter($.CompanyCode == vars.companyCode)
+
+	]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="80aeced0-776a-4ddc-8f6f-cf18f5715a4e" message="destination location is #[vars.destinationLocation] and paylaod is #[payload]" />
+				<ee:transform doc:name="Transform Message" doc:id="7bd9e79a-adca-4a3b-8a6a-a0070429ddb7" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload filter ($.destinationLocation.locationCode == vars.destinationLocation) ]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[vars.companyCode != null]">
+				<logger level="INFO" doc:name="Logger" doc:id="f444a0e7-1e0f-4cc9-b62b-9d404457926f" message="company code is #[vars.companyCode]"/>
+				<ee:transform doc:name="Transform Message" doc:id="697b95cb-e469-4517-a908-f366aa3f2694" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload filter($.CompanyCode == vars.companyCode)]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[vars.destinationLocation != null]">
+				<ee:transform doc:name="Transform Message" doc:id="473a1e00-aa40-4c15-ad44-660b461032a8" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload filter($.destinationLocation.locationCode == vars.destinationLocation)]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="f6bedfd9-04ae-4ca9-95f6-799096f53730" message="query params are null"/>
+			</otherwise>
+		</choice>
+		<logger level="INFO" message="get:\booking\(transportType)\routes:application\json:routespapi-config" />
+    </flow>
+   
+    <flow name="routespapiFlow" doc:id="9a85cb97-5654-4677-9c86-63b5d71fed43" >
+		<os:retrieve doc:name="Retrieve" doc:id="ff9a10b2-39e9-4d22-9eb3-effa5a706b31" key="#[payload]" objectStore= "Location_Object_store"/>
+	</flow>
+	<sub-flow name="firstCoachLandSubFlow" doc:id="78dadd40-70b0-418f-a211-d8abde910b60">
+        <http:request method="GET" doc:id="a5dc2b73-d6c3-4cd8-bb7e-f6b349935dfb" doc:name="" config-ref="First_couch_HTTP_Request_configuration" path="/api/land/firstcoach/routes" />
+    </sub-flow>
+	<sub-flow name="transnationalLandSubFlow" doc:id="d1b36613-aba8-458a-a46c-56421d229c10">
+        <http:request method="GET" doc:id="8787bcc0-253f-44c7-89d7-3056ae95e4d0" doc:name="" config-ref="Transnational_HTTP_Request_configuration" path="/api/land/transnational/routes" />
+    </sub-flow>
+</mule>
